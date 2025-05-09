@@ -1,0 +1,1012 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Рекомендации фильмов</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+            background: #f0f2f5;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            gap: 20px;
+            position: relative;
+            padding: 0 15px;
+        }
+
+        .sidebar {
+            width: 300px;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            height: fit-content;
+            position: fixed;
+            top: 20px;
+            left: -320px;
+            transition: left 0.3s ease;
+            z-index: 1000;
+        }
+
+        .sidebar.active {
+            left: 20px;
+        }
+
+        .main-content {
+            flex: 1;
+            margin-left: 0;
+            transition: margin-left 0.3s ease;
+        }
+
+        .main-content.sidebar-active {
+            margin-left: 320px;
+        }
+
+        .toggle-sidebar {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            z-index: 1001;
+            transition: all 0.3s;
+            width: auto;
+            font-size: 14px;
+        }
+
+        .toggle-sidebar.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .sidebar-close {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            border: none;
+            background-color: white;
+            font-size: 20px;
+            color: #6c757d;
+            cursor: pointer;
+            padding: 0;
+            line-height: 1;
+            transition: color 0.3s;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .sidebar-close:hover {
+            color: #dc3545;
+            background-color: white;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            max-width: 400px;
+            width: 90%;
+            position: relative;
+            animation: modalShow 0.3s ease;
+        }
+
+        @keyframes modalShow {
+            from {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .modal-title {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #dc3545;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5em;
+            cursor: pointer;
+            color: #6c757d;
+            padding: 0;
+            width: auto;
+        }
+
+        .modal-body {
+            margin-bottom: 20px;
+            color: #495057;
+        }
+
+        .modal-footer {
+            text-align: right;
+        }
+
+        .modal-footer button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .modal-footer button:hover {
+            background: #0056b3;
+        }
+
+        h1 {
+            text-align: center;
+            color: #1a1a1a;
+            margin-bottom: 30px;
+        }
+
+        .filter-section {
+            margin-bottom: 20px;
+        }
+
+        .filter-section h3 {
+            margin-bottom: 10px;
+            color: #1a1a1a;
+        }
+
+        .genre-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 10px 0;
+        }
+
+        .genre-item {
+            background: #e9ecef;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .genre-item.selected {
+            background: #007bff;
+            color: white;
+        }
+
+        .year-range {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .year-range input {
+            width: 80px;
+            padding: 5px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        .rating-range {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .rating-range input {
+            width: 80px;
+            padding: 5px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        .recommendations {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .movie-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: transform 0.3s;
+        }
+
+        .movie-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .movie-card h3 {
+            color: #1a1a1a;
+            margin-bottom: 10px;
+        }
+
+        .movie-card .rating {
+            color: #ffc107;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .movie-card .genre {
+            color: #6c757d;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+
+        .movie-card .description {
+            color: #495057;
+            font-size: 0.9em;
+            line-height: 1.5;
+        }
+
+        .movie-card .year {
+            color: #6c757d;
+            font-size: 0.9em;
+            margin-bottom: 5px;
+        }
+
+        .movie-card .director {
+            color: #6c757d;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s;
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            background: #0056b3;
+        }
+
+        .clear-filters {
+            background: #dc3545;
+            margin-top: 20px;
+        }
+
+        .clear-filters:hover {
+            background: #c82333;
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 280px;
+                left: -300px;
+            }
+
+            .sidebar.active {
+                left: 10px;
+            }
+
+            .main-content.sidebar-active {
+                margin-left: 0;
+            }
+
+            .recommendations {
+                grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            }
+
+            .movie-card {
+                padding: 15px;
+            }
+
+            .genre-list {
+                gap: 5px;
+            }
+
+            .genre-item {
+                padding: 6px 12px;
+                font-size: 14px;
+            }
+
+            .year-range, .rating-range {
+                flex-direction: column;
+                gap: 5px;
+            }
+
+            .year-range input, .rating-range input {
+                width: 100%;
+            }
+
+            .toggle-sidebar {
+                padding: 6px 12px;
+                font-size: 13px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding: 10px;
+            }
+
+            .container {
+                padding: 0 5px;
+            }
+
+            .sidebar {
+                width: 260px;
+                left: -280px;
+                padding: 15px;
+            }
+
+            .sidebar.active {
+                left: 5px;
+            }
+
+            .recommendations {
+                grid-template-columns: 1fr;
+            }
+
+            .movie-card {
+                padding: 12px;
+            }
+
+            .movie-card h3 {
+                font-size: 16px;
+            }
+
+            .movie-card .description {
+                font-size: 14px;
+            }
+
+            .genre-item {
+                padding: 5px 10px;
+                font-size: 13px;
+            }
+
+            .filter-section h3 {
+                font-size: 15px;
+            }
+
+            .modal-content {
+                width: 95%;
+                padding: 15px;
+            }
+
+            .modal-title {
+                font-size: 16px;
+            }
+
+            .modal-body {
+                font-size: 14px;
+            }
+        }
+
+        @media (max-width: 320px) {
+            .sidebar {
+                width: 240px;
+                left: -260px;
+            }
+
+            .sidebar.active {
+                left: 0;
+            }
+
+            .movie-card {
+                padding: 10px;
+            }
+
+            .genre-item {
+                padding: 4px 8px;
+                font-size: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <button class="toggle-sidebar" onclick="toggleSidebar()">Фильтры</button>
+
+    <div class="container">
+        <div class="sidebar" id="sidebar">
+            <button class="sidebar-close" onclick="toggleSidebar()">&times;</button>
+            <h2>Фильтры</h2>
+            
+            <div class="filter-section">
+                <h3>Жанры</h3>
+                <div class="genre-list" id="genreList"></div>
+            </div>
+
+            <div class="filter-section">
+                <h3>Год выпуска</h3>
+                <div class="year-range">
+                    <input type="number" id="yearFrom" placeholder="От" min="1900" max="2024">
+                    <span>-</span>
+                    <input type="number" id="yearTo" placeholder="До" min="1900" max="2024">
+                </div>
+            </div>
+
+            <div class="filter-section">
+                <h3>Рейтинг</h3>
+                <div class="rating-range">
+                    <input type="number" id="ratingFrom" placeholder="От" min="0" max="10" step="0.1">
+                    <span>-</span>
+                    <input type="number" id="ratingTo" placeholder="До" min="0" max="10" step="0.1">
+                </div>
+            </div>
+
+            <button onclick="getRecommendations()">Применить фильтры</button>
+            <button class="clear-filters" onclick="clearFilters()">Сбросить фильтры</button>
+        </div>
+
+        <div class="main-content" id="mainContent">
+            <h1>Рекомендации фильмов</h1>
+            <div class="recommendations" id="recommendations"></div>
+        </div>
+    </div>
+
+    <div class="modal" id="errorModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">Ошибка</div>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="modalMessage"></div>
+            <div class="modal-footer">
+                <button onclick="closeModal()">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Данные о фильмах
+        const movies = [
+            {
+                id: 1,
+                title: "Начало",
+                genre: ["Sci-Fi", "Action", "Thriller"],
+                year: 2010,
+                director: "Кристофер Нолан",
+                rating: 8.8,
+                description: "Коббу дается шанс на искупление. Вместо идеальной кражи, Кобб и его команда спецов должны будут выполнить обратное задание."
+            },
+            {
+                id: 2,
+                title: "Побег из Шоушенка",
+                genre: ["Drama"],
+                year: 1994,
+                director: "Фрэнк Дарабонт",
+                rating: 9.3,
+                description: "Два заключенных находят утешение и, в конечном итоге, искупление через акты обычной порядочности."
+            },
+            {
+                id: 3,
+                title: "Темный рыцарь",
+                genre: ["Action", "Crime", "Drama"],
+                year: 2008,
+                director: "Кристофер Нолан",
+                rating: 9.0,
+                description: "Когда угроза, известная как Джокер, сеет хаос и разруху среди жителей Готэма, Бэтмен должен принять одно из величайших психологических и физических испытаний своей способности бороться с несправедливостью."
+            },
+            {
+                id: 4,
+                title: "Криминальное чтиво",
+                genre: ["Crime", "Drama"],
+                year: 1994,
+                director: "Квентин Тарантино",
+                rating: 8.9,
+                description: "Жизни двух киллеров, боксера, гангстера и его жены, а также пары бандитов переплетаются в четырех историях насилия и искупления."
+            },
+            {
+                id: 5,
+                title: "Матрица",
+                genre: ["Action", "Sci-Fi"],
+                year: 1999,
+                director: "Лана Вачовски",
+                rating: 8.7,
+                description: "Компьютерный хакер узнает от таинственных повстанцев о истинной природе своей реальности и своей роли в войне против ее контроллеров."
+            },
+            {
+                id: 6,
+                title: "Властелин колец: Возвращение короля",
+                genre: ["Fantasy", "Adventure", "Drama"],
+                year: 2003,
+                director: "Питер Джексон",
+                rating: 9.0,
+                description: "Гэндальф и Арагорн возглавляют мир людей против армии Саурона, чтобы отвлечь его от Фродо и Сэма, приближающихся к Мордору с Кольцом Всевластия."
+            },
+            {
+                id: 7,
+                title: "Форрест Гамп",
+                genre: ["Drama", "Comedy"],
+                year: 1994,
+                director: "Роберт Земекис",
+                rating: 8.8,
+                description: "История жизни Форреста Гампа — не очень умного, но доброго и открытого парня."
+            },
+            {
+                id: 8,
+                title: "Зеленая миля",
+                genre: ["Drama", "Crime", "Fantasy"],
+                year: 1999,
+                director: "Фрэнк Дарабонт",
+                rating: 9.3,
+                description: "В тюрьме «Холодная гора» появляется заключенный с божественным даром."
+            },
+            {
+                id: 9,
+                title: "Интерстеллар",
+                genre: ["Sci-Fi", "Adventure", "Drama"],
+                year: 2014,
+                director: "Кристофер Нолан",
+                rating: 8.6,
+                description: "Группа исследователей отправляется через червоточину в поисках нового дома для человечества."
+            },
+            {
+                id: 10,
+                title: "Бойцовский клуб",
+                genre: ["Drama", "Thriller"],
+                year: 1999,
+                director: "Дэвид Финчер",
+                rating: 8.8,
+                description: "Страдающий от бессонницы офисный работник и загадочный торговец мылом создают подпольную организацию."
+            },
+            {
+                id: 11,
+                title: "Властелин колец: Братство кольца",
+                genre: ["Fantasy", "Adventure", "Drama"],
+                year: 2001,
+                director: "Питер Джексон",
+                rating: 8.8,
+                description: "Молодой хоббит Фродо Бэггинс отправляется в опасное путешествие, чтобы уничтожить древнее кольцо."
+            },
+            {
+                id: 12,
+                title: "Властелин колец: Две крепости",
+                genre: ["Fantasy", "Adventure", "Drama"],
+                year: 2002,
+                director: "Питер Джексон",
+                rating: 8.7,
+                description: "Фродо и Сэм продолжают путь к Мордору, в то время как остальные члены Братства готовятся к битве."
+            },
+            {
+                id: 13,
+                title: "Гладиатор",
+                genre: ["Action", "Drama", "Adventure"],
+                year: 2000,
+                director: "Ридли Скотт",
+                rating: 8.5,
+                description: "Римский генерал становится рабом и гладиатором, чтобы отомстить за убийство своей семьи."
+            },
+            {
+                id: 14,
+                title: "Титаник",
+                genre: ["Drama", "Romance"],
+                year: 1997,
+                director: "Джеймс Кэмерон",
+                rating: 7.9,
+                description: "История любви между бедным художником и богатой девушкой на борту затонувшего корабля."
+            },
+            {
+                id: 15,
+                title: "Властелин колец: Возвращение короля",
+                genre: ["Fantasy", "Adventure", "Drama"],
+                year: 2003,
+                director: "Питер Джексон",
+                rating: 9.0,
+                description: "Финальная часть трилогии о борьбе за Средиземье."
+            },
+            {
+                id: 16,
+                title: "Пираты Карибского моря: Проклятие Черной жемчужины",
+                genre: ["Action", "Adventure", "Fantasy"],
+                year: 2003,
+                director: "Гор Вербински",
+                rating: 8.0,
+                description: "Капитан Джек Воробей и кузнец Уилл Тернер отправляются на поиски похищенной дочери губернатора."
+            },
+            {
+                id: 17,
+                title: "Гарри Поттер и философский камень",
+                genre: ["Fantasy", "Adventure", "Family"],
+                year: 2001,
+                director: "Крис Коламбус",
+                rating: 7.6,
+                description: "Мальчик-сирота узнает, что он волшебник, и отправляется в школу магии Хогвартс."
+            },
+            {
+                id: 18,
+                title: "Властелин колец: Две крепости",
+                genre: ["Fantasy", "Adventure", "Drama"],
+                year: 2002,
+                director: "Питер Джексон",
+                rating: 8.7,
+                description: "Продолжение эпического путешествия по Средиземью."
+            },
+            {
+                id: 19,
+                title: "Матрица: Перезагрузка",
+                genre: ["Action", "Sci-Fi"],
+                year: 2003,
+                director: "Лана Вачовски",
+                rating: 7.2,
+                description: "Нео продолжает борьбу с машинами, но теперь он должен столкнуться с новыми врагами."
+            },
+            {
+                id: 20,
+                title: "Матрица: Революция",
+                genre: ["Action", "Sci-Fi"],
+                year: 2003,
+                director: "Лана Вачовски",
+                rating: 6.8,
+                description: "Финальная битва между людьми и машинами."
+            },
+            {
+                id: 21,
+                title: "Властелин колец: Братство кольца",
+                genre: ["Fantasy", "Adventure", "Drama"],
+                year: 2001,
+                director: "Питер Джексон",
+                rating: 8.8,
+                description: "Начало эпического путешествия по Средиземью."
+            },
+            {
+                id: 22,
+                title: "Гарри Поттер и Тайная комната",
+                genre: ["Fantasy", "Adventure", "Family"],
+                year: 2002,
+                director: "Крис Коламбус",
+                rating: 7.4,
+                description: "Гарри Поттер возвращается в Хогвартс на второй год обучения."
+            },
+            {
+                id: 23,
+                title: "Гарри Поттер и узник Азкабана",
+                genre: ["Fantasy", "Adventure", "Family"],
+                year: 2004,
+                director: "Альфонсо Куарон",
+                rating: 7.9,
+                description: "Гарри Поттер узнает о таинственном узнике, сбежавшем из Азкабана."
+            },
+            {
+                id: 24,
+                title: "Гарри Поттер и Кубок огня",
+                genre: ["Fantasy", "Adventure", "Family"],
+                year: 2005,
+                director: "Майк Ньюэлл",
+                rating: 7.7,
+                description: "Гарри Поттер неожиданно становится участником Турнира Трех Волшебников."
+            },
+            {
+                id: 25,
+                title: "Гарри Поттер и Орден Феникса",
+                genre: ["Fantasy", "Adventure", "Family"],
+                year: 2007,
+                director: "Дэвид Йейтс",
+                rating: 7.5,
+                description: "Гарри Поттер и его друзья создают тайную организацию для подготовки к грядущей войне."
+            },
+            {
+                id: 26,
+                title: "Гарри Поттер и Принц-полукровка",
+                genre: ["Fantasy", "Adventure", "Family"],
+                year: 2009,
+                director: "Дэвид Йейтс",
+                rating: 7.6,
+                description: "Гарри Поттер узнает больше о прошлом Волан-де-Морта."
+            },
+            {
+                id: 27,
+                title: "Гарри Поттер и Дары Смерти: Часть 1",
+                genre: ["Fantasy", "Adventure", "Family"],
+                year: 2010,
+                director: "Дэвид Йейтс",
+                rating: 7.7,
+                description: "Гарри, Рон и Гермиона отправляются на поиски крестражей."
+            },
+            {
+                id: 28,
+                title: "Гарри Поттер и Дары Смерти: Часть 2",
+                genre: ["Fantasy", "Adventure", "Family"],
+                year: 2011,
+                director: "Дэвид Йейтс",
+                rating: 8.1,
+                description: "Финальная битва между Гарри Поттером и Волан-де-Мортом."
+            },
+            {
+                id: 29,
+                title: "Пираты Карибского моря: Сундук мертвеца",
+                genre: ["Action", "Adventure", "Fantasy"],
+                year: 2006,
+                director: "Гор Вербински",
+                rating: 7.3,
+                description: "Джек Воробей должен найти сундук мертвеца, чтобы спастись от проклятия."
+            },
+            {
+                id: 30,
+                title: "Пираты Карибского моря: На краю света",
+                genre: ["Action", "Adventure", "Fantasy"],
+                year: 2007,
+                director: "Гор Вербински",
+                rating: 7.1,
+                description: "Джек Воробей и его друзья отправляются на край света, чтобы спасти капитана."
+            },
+            {
+                id: 31,
+                title: "Пираты Карибского моря: На странных берегах",
+                genre: ["Action", "Adventure", "Fantasy"],
+                year: 2011,
+                director: "Роб Маршалл",
+                rating: 6.6,
+                description: "Джек Воробей отправляется на поиски источника вечной молодости."
+            },
+            {
+                id: 32,
+                title: "Пираты Карибского моря: Мертвецы не рассказывают сказки",
+                genre: ["Action", "Adventure", "Fantasy"],
+                year: 2017,
+                director: "Йоаким Роннинг",
+                rating: 6.5,
+                description: "Джек Воробей сталкивается со своим старым врагом, капитаном Салазаром."
+            },
+            {
+                id: 33,
+                title: "Индиана Джонс: В поисках утраченного ковчега",
+                genre: ["Action", "Adventure"],
+                year: 1981,
+                director: "Стивен Спилберг",
+                rating: 8.4,
+                description: "Археолог Индиана Джонс отправляется на поиски Ковчега Завета."
+            },
+            {
+                id: 34,
+                title: "Индиана Джонс и Храм судьбы",
+                genre: ["Action", "Adventure"],
+                year: 1984,
+                director: "Стивен Спилберг",
+                rating: 7.6,
+                description: "Индиана Джонс отправляется в Индию, чтобы найти священный камень."
+            },
+            {
+                id: 35,
+                title: "Индиана Джонс и Последний крестовый поход",
+                genre: ["Action", "Adventure"],
+                year: 1989,
+                director: "Стивен Спилберг",
+                rating: 8.2,
+                description: "Индиана Джонс отправляется на поиски Святого Грааля."
+            },
+            {
+                id: 36,
+                title: "Индиана Джонс и Королевство хрустального черепа",
+                genre: ["Action", "Adventure"],
+                year: 2008,
+                director: "Стивен Спилберг",
+                rating: 6.2,
+                description: "Индиана Джонс отправляется на поиски хрустального черепа."
+            },
+            {
+                id: 37,
+                title: "Индиана Джонс и Колесо судьбы",
+                genre: ["Action", "Adventure"],
+                year: 2023,
+                director: "Джеймс Мэнголд",
+                rating: 6.7,
+                description: "Последнее приключение Индианы Джонса."
+            },
+            {
+                id: 38,
+                title: "Звездные войны: Эпизод 4 - Новая надежда",
+                genre: ["Action", "Adventure", "Fantasy"],
+                year: 1977,
+                director: "Джордж Лукас",
+                rating: 8.6,
+                description: "Люк Скайуокер присоединяется к повстанцам в борьбе против Империи."
+            },
+            {
+                id: 39,
+                title: "Звездные войны: Эпизод 5 - Империя наносит ответный удар",
+                genre: ["Action", "Adventure", "Fantasy"],
+                year: 1980,
+                director: "Ирвин Кершнер",
+                rating: 8.7,
+                description: "Люк Скайуокер обучается у мастера Йоды, в то время как его друзья скрываются от Империи."
+            },
+            {
+                id: 40,
+                title: "Звездные войны: Эпизод 6 - Возвращение джедая",
+                genre: ["Action", "Adventure", "Fantasy"],
+                year: 1983,
+                director: "Ричард Маркуанд",
+                rating: 8.3,
+                description: "Люк Скайуокер пытается вернуть своего отца на светлую сторону Силы."
+            }
+        ];
+
+        // Получаем все уникальные жанры
+        const allGenres = [...new Set(movies.flatMap(movie => movie.genre))];
+
+        // Функции для работы с сайдбаром
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = document.getElementById('mainContent');
+            const toggleButton = document.querySelector('.toggle-sidebar');
+            
+            sidebar.classList.toggle('active');
+            mainContent.classList.toggle('sidebar-active');
+            toggleButton.classList.toggle('hidden');
+        }
+
+        // Функции для работы с модальным окном
+        function showModal(message) {
+            const modal = document.getElementById('errorModal');
+            const modalMessage = document.getElementById('modalMessage');
+            modalMessage.textContent = message;
+            modal.classList.add('active');
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('errorModal');
+            modal.classList.remove('active');
+        }
+
+        // Инициализация списка жанров
+        function initializeGenres() {
+            const genreList = document.getElementById('genreList');
+            allGenres.forEach(genre => {
+                const genreElement = document.createElement('div');
+                genreElement.className = 'genre-item';
+                genreElement.textContent = genre;
+                genreElement.onclick = () => {
+                    genreElement.classList.toggle('selected');
+                };
+                genreList.appendChild(genreElement);
+            });
+        }
+
+        // Получение рекомендаций
+        function getRecommendations() {
+            const selectedGenres = Array.from(document.querySelectorAll('.genre-item.selected'))
+                .map(el => el.textContent);
+            
+            const yearFrom = document.getElementById('yearFrom').value;
+            const yearTo = document.getElementById('yearTo').value;
+            const ratingFrom = document.getElementById('ratingFrom').value;
+            const ratingTo = document.getElementById('ratingTo').value;
+
+            // Проверка корректности введенных данных
+            if (yearFrom && yearTo && parseInt(yearFrom) > parseInt(yearTo)) {
+                showModal('Год "От" не может быть больше года "До"');
+                return;
+            }
+
+            if (ratingFrom && ratingTo && parseFloat(ratingFrom) > parseFloat(ratingTo)) {
+                showModal('Рейтинг "От" не может быть больше рейтинга "До"');
+                return;
+            }
+
+            if (yearFrom && (parseInt(yearFrom) < 1900 || parseInt(yearFrom) > 2024)) {
+                showModal('Год должен быть в диапазоне от 1900 до 2024');
+                return;
+            }
+
+            if (yearTo && (parseInt(yearTo) < 1900 || parseInt(yearTo) > 2024)) {
+                showModal('Год должен быть в диапазоне от 1900 до 2024');
+                return;
+            }
+
+            if (ratingFrom && (parseFloat(ratingFrom) < 0 || parseFloat(ratingFrom) > 10)) {
+                showModal('Рейтинг должен быть в диапазоне от 0 до 10');
+                return;
+            }
+
+            if (ratingTo && (parseFloat(ratingTo) < 0 || parseFloat(ratingTo) > 10)) {
+                showModal('Рейтинг должен быть в диапазоне от 0 до 10');
+                return;
+            }
+
+            let recommendations = movies.filter(movie => {
+                const matchesGenres = selectedGenres.length === 0 || 
+                    movie.genre.some(genre => selectedGenres.includes(genre));
+                const matchesYear = (!yearFrom || movie.year >= parseInt(yearFrom)) && 
+                                  (!yearTo || movie.year <= parseInt(yearTo));
+                const matchesRating = (!ratingFrom || movie.rating >= parseFloat(ratingFrom)) && 
+                                    (!ratingTo || movie.rating <= parseFloat(ratingTo));
+                
+                return matchesGenres && matchesYear && matchesRating;
+            });
+
+            // Сортируем по рейтингу
+            recommendations.sort((a, b) => b.rating - a.rating);
+
+            displayRecommendations(recommendations);
+        }
+
+        // Очистка фильтров
+        function clearFilters() {
+            document.querySelectorAll('.genre-item').forEach(item => {
+                item.classList.remove('selected');
+            });
+            document.getElementById('yearFrom').value = '';
+            document.getElementById('yearTo').value = '';
+            document.getElementById('ratingFrom').value = '';
+            document.getElementById('ratingTo').value = '';
+            getRecommendations();
+        }
+
+        // Отображение рекомендаций
+        function displayRecommendations(recommendations) {
+            const recommendationsContainer = document.getElementById('recommendations');
+            recommendationsContainer.innerHTML = '';
+
+            if (recommendations.length === 0) {
+                recommendationsContainer.innerHTML = '<p>Фильмы не найдены</p>';
+                return;
+            }
+
+            recommendations.forEach(movie => {
+                const movieCard = document.createElement('div');
+                movieCard.className = 'movie-card';
+                movieCard.innerHTML = `
+                    <h3>${movie.title}</h3>
+                    <div class="year">Год: ${movie.year}</div>
+                    <div class="director">Режиссер: ${movie.director}</div>
+                    <div class="rating">Рейтинг: ${movie.rating}/10</div>
+                    <div class="genre">Жанры: ${movie.genre.join(', ')}</div>
+                    <div class="description">${movie.description}</div>
+                `;
+                recommendationsContainer.appendChild(movieCard);
+            });
+        }
+
+        // Инициализация при загрузке страницы
+        window.onload = () => {
+            initializeGenres();
+            getRecommendations();
+        };
+    </script>
+</body>
+</html> 
